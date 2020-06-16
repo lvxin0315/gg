@@ -7,7 +7,5 @@ import (
 
 func InitRouter(engine *gin.Engine) {
 	v1 := engine.Group("/v1")
-	{
-		v1.Any("/ping", handlers.Pong)
-	}
+	v1.Any("/ping", handlers.Pong)
 }
