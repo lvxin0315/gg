@@ -1,0 +1,12 @@
+appname: test
+
+db:
+  name:     test
+  user:     test
+  password: test
+  port:     1234
+  host:     127.0.0.1
+
+contacts:
+  - name: i test
+    email: test@test.com
