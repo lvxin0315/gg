@@ -1,11 +1,13 @@
 appname: test
 
 db:
-  name:     test
-  user:     test
-  password: test
-  port:     1234
+  name:     fa_test
+  user:     root
+  password: root
+  port:     3306
   host:     127.0.0.1
+  maxIdleConns: 5
+  maxOpenConns: 10
 
 contacts:
   - name: i test

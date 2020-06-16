@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/lvxin0315/gg/databases"
 	"github.com/lvxin0315/gg/middlewares"
 	"github.com/lvxin0315/gg/routers"
 )
@@ -12,6 +13,7 @@ func main() {
 	routers.InitRouter(engine)
 	//中间件-跨域
 	engine.Use(middlewares.Cors())
-
+	//加载db
+	databases.InitDB()
 	engine.Run()
 }

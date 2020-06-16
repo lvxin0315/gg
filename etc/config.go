@@ -10,7 +10,7 @@ var Config = struct {
 		Name  string
 		Email string `required:"true"`
 	}
-	DB *MysqlConfig `default:"db"`
+	DB *mysqlConfig `default:"db"`
 }{}
 
 func init() {
