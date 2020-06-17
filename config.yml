@@ -1,7 +1,7 @@
 appname: test
 
 db:
-  name:     fa_test
+  name:     jcc_mall
   user:     root
   password: root
   port:     3306

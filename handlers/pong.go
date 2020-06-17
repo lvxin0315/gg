@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/lvxin0315/gg/databases"
 	"github.com/lvxin0315/gg/etc"
+	"github.com/lvxin0315/gg/models"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,8 +20,19 @@ func Pong(c *gin.Context) {
 	//测试连接池
 	t := 2000
 	for {
-		databases.NewDB().Exec("SELECT * FROM fa_config")
+		databases.NewDB().Exec("SELECT * FROM mall_article")
 		t--
+
+		//测试模型操作
+		articleModel := new(models.MallArticle)
+		articleModel.Author = fmt.Sprintf("Author%d", t)
+		articleModel.Title = fmt.Sprintf("Title%d", t)
+		articleModel.ShareTitle = fmt.Sprintf("ShareTitle%d", t)
+		err := databases.NewDB().Model(articleModel).Save(articleModel).Error
+		if err != nil {
+			logrus.Error(err)
+		}
+
 		if t == 0 {
 			break
 		}
