@@ -2,6 +2,7 @@ package databases
 
 import (
 	"fmt"
+	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/lvxin0315/gg/etc"
 )
@@ -9,7 +10,6 @@ import (
 // import _ "github.com/jinzhu/gorm/dialects/postgres"
 // import _ "github.com/jinzhu/gorm/dialects/sqlite"
 // import _ "github.com/jinzhu/gorm/dialects/mssql"
-import "github.com/jinzhu/gorm"
 
 var gormDB *gorm.DB
 
@@ -27,6 +27,9 @@ func InitDB() {
 	}
 	db.DB().SetMaxIdleConns(etc.Config.DB.MaxIdleConns)
 	db.DB().SetMaxOpenConns(etc.Config.DB.MaxOpenConns)
+	//plugin
+	db.Callback().Create().After("gorm:create").Register("plugin:gg_after_create", ggAfterCreate)
+	db.Callback().Query().Before("gorm:query_destination").Register("plugin:gg_before_query_destination", ggBeforeQueryDestination)
 	gormDB = db
 }
 
