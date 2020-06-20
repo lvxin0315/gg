@@ -68,6 +68,46 @@ func (table *memTableSchema) Insert(data interface{}) (length int, err error) {
 }
 
 /*
+查询数据
+@param uint offset 其实索引位
+@param uint limit 查询长度
+@return []interface{}
+*/
+func (table *memTableSchema) Select(offset, limit uint) ([]interface{}, error) {
+	//data 空
+	if table.IsEmpty() {
+		//fmt.Println("data 空")
+		return nil, nil
+	}
+	//索引大于长度
+	if offset > uint(table.Length()+1) {
+		//fmt.Println("索引大于长度")
+		return nil, nil
+	}
+	//长度验证
+	if (offset + limit) > uint(table.Length()+1) {
+		//fmt.Println("长度验证")
+		return table.Data[offset:], nil
+	}
+	//正常
+	//fmt.Println("正常", offset, limit)
+	return table.Data[offset:][:limit], nil
+}
+
+//获取长度
+func (table *memTableSchema) Length() int {
+	return len(table.Data)
+}
+
+//获取长度
+func (table *memTableSchema) IsEmpty() bool {
+	if len(table.Data) == 0 || table.Data == nil {
+		return true
+	}
+	return false
+}
+
+/*
 验证table的数据类型
 */
 func (table *memTableSchema) ValidateDataType(data interface{}) error {

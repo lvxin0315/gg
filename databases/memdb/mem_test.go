@@ -3,7 +3,6 @@ package memdb
 import (
 	"fmt"
 	"github.com/lvxin0315/gg/helper"
-	"github.com/sirupsen/logrus"
 	. "github.com/smartystreets/goconvey/convey"
 	"reflect"
 	"testing"
@@ -28,15 +27,14 @@ var table1 *memTableSchema
 
 //建库
 func TestNewMemDB(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	_ = DropMemDB(TestDB)
 	Convey("测试new内存DB", t, func() {
 		db, err := NewMemDB(TestDB)
 		if err != nil {
-			logrus.Error(err)
+			fmt.Println(err)
 			t.Fail()
 		}
-		logrus.Println(len(db.Tables))
+		fmt.Println(len(db.Tables))
 		testDB = db
 	})
 }
@@ -47,11 +45,11 @@ func TestMemDBSchema_CreateTableSchema(t *testing.T) {
 	Convey(fmt.Sprintf("测试创建表：%s", Table1), t, func() {
 		createTable1, err := testDB.CreateTableSchema(Table1, reflect.TypeOf(new(testData)))
 		if err != nil {
-			logrus.Error(err)
+			fmt.Println(err)
 			t.Fail()
 			return
 		}
-		logrus.Println(createTable1.Data)
+		fmt.Println(createTable1.Data)
 		table1 = createTable1
 	})
 }
@@ -63,19 +61,19 @@ func TestMemDBSchema_ValidateTableName(t *testing.T) {
 	Convey(fmt.Sprintf("测试创建第二张表：%s", Table2), t, func() {
 		table2, err := testDB.CreateTableSchema(Table2, reflect.TypeOf(new(testData)))
 		if err != nil {
-			logrus.Error(err)
+			fmt.Println(err)
 			t.Fail()
 		}
-		logrus.Println(len(table2.Data))
+		fmt.Println(len(table2.Data))
 	})
 
 	Convey(fmt.Sprintf("测试创建第三张表：%s，应该报错误", Table2), t, func() {
 		_, err := testDB.CreateTableSchema(Table2, reflect.TypeOf(new(testData)))
 		if err == nil {
-			logrus.Error(fmt.Errorf("未返回表同名错误"))
+			fmt.Println(fmt.Errorf("未返回表同名错误"))
 			t.Fail()
 		}
-		logrus.Println(err)
+		fmt.Println(err)
 	})
 }
 
@@ -88,10 +86,10 @@ func TestMemTableSchema_Insert(t *testing.T) {
 			Age:  1,
 		})
 		if err != nil {
-			logrus.Error(err)
+			fmt.Println(err)
 			t.Fail()
 		}
-		logrus.Println(fmt.Sprintf("插入第一条数据后，长度是：%d", l))
+		fmt.Println(fmt.Sprintf("插入第一条数据后，长度是：%d", l))
 	})
 }
 
@@ -101,21 +99,48 @@ func TestMemTableSchema_Insert2(t *testing.T) {
 	Convey(fmt.Sprintf("开始插入"), t, func() {
 		startTime := time.Now().Unix()
 		limit := 10000
-		for limit >= 0 {
-			l, err := table1.Insert(&testData{
+		for limit > 0 {
+			_, err := table1.Insert(&testData{
 				Name: fmt.Sprintf("name%d", 10000-limit),
 				Age:  uint(10000 - limit),
 			})
 			if err != nil {
-				logrus.Error(err)
+				fmt.Println(err)
 				t.Fail()
+				return
 			}
-			logrus.Println(fmt.Sprintf("插入第%d条数据后，长度是：%d", 10000-limit, l))
+			//fmt.Println(fmt.Sprintf("插入第%d条数据后，长度是：%d", 10000-limit, l))
 			limit--
 			//内存情况
 			helper.PrintMemState()
 		}
 		//输出时间
-		logrus.Println(fmt.Sprintf("消耗时间：%d", time.Now().Unix()-startTime))
+		fmt.Println(fmt.Sprintf("消耗时间：%d", time.Now().Unix()-startTime))
+		So(table1.Length(), ShouldEqual, 10000)
+	})
+}
+
+//查询
+func TestMemTableSchema_Select(t *testing.T) {
+	//先插入10000
+	TestMemTableSchema_Insert2(t)
+	//长度
+	fmt.Println("table1.Length():", table1.Length())
+	selectFunc(t, 0, 100, 100)
+	selectFunc(t, 100, 100, 100)
+	selectFunc(t, 10000, 100, 0)
+	selectFunc(t, 9999, 100, 1)
+	selectFunc(t, 50000, 100, 0)
+}
+
+func selectFunc(t *testing.T, offset, limit uint, dataLength int) {
+	Convey(fmt.Sprintf("查询用例: %d, %d", offset, limit), t, func() {
+		data1, err := table1.Select(offset, limit)
+		So(err, ShouldBeNil)
+		fmt.Println("data1长度是：", len(data1))
+		if dataLength > 0 {
+			fmt.Println(fmt.Sprintf("查询用例: %d, %d 的最后一条数据是: %v", offset, limit, data1[len(data1)-1]))
+		}
+		So(len(data1), ShouldEqual, dataLength)
 	})
 }
