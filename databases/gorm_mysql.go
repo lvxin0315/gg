@@ -14,7 +14,7 @@ import (
 var gormDB *gorm.DB
 
 //初始化数据库
-func InitDB() {
+func InitMysqlDB() {
 	db, err := gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local",
 		etc.Config.DB.User,
 		etc.Config.DB.Password,

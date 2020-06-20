@@ -1,4 +1,5 @@
 appname: test
+port: 8088
 
 db:
   name:     jcc_mall
