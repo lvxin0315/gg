@@ -11,7 +11,8 @@ var Config = struct {
 		Name  string
 		Email string `required:"true"`
 	}
-	DB *mysqlConfig `default:"db"`
+	DB    *mysqlConfig `default:"db"`
+	MemDB *memDBConfig `yaml:"memDB"`
 }{}
 
 func init() {

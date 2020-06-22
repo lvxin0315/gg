@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-type memDBSchema struct {
+type MemDBSchema struct {
 	Name string
 	//表
 	Tables map[string]*memTableSchema
@@ -17,7 +17,7 @@ type memDBSchema struct {
 @param reflect.Type dataType 保存数据类型
 @return *memTableSchema
 */
-func (db *memDBSchema) CreateTableSchema(tableName string, dataType reflect.Type) (*memTableSchema, error) {
+func (db *MemDBSchema) CreateTableSchema(tableName string, dataType reflect.Type) (*memTableSchema, error) {
 	err := db.ValidateTableName(tableName)
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (db *memDBSchema) CreateTableSchema(tableName string, dataType reflect.Type
 删除表
 @param string tableName 表名
 */
-func (db *memDBSchema) DropTableSchema(tableName string) error {
+func (db *MemDBSchema) DropTableSchema(tableName string) error {
 	if db.Tables[tableName] == nil {
 		return fmt.Errorf("表「%s」不存在", tableName)
 	}
@@ -44,11 +44,23 @@ func (db *memDBSchema) DropTableSchema(tableName string) error {
 }
 
 /*
+获取表
+@param string tableName 表名
+@return *memTableSchema
+*/
+func (db *MemDBSchema) GetTableSchema(tableName string) (*memTableSchema, error) {
+	if db.Tables[tableName] == nil {
+		return nil, fmt.Errorf("表「%s」不存在", tableName)
+	}
+	return db.Tables[tableName], nil
+}
+
+/*
 验证TableName唯一
 @param string tableName table名称
 @return error
 */
-func (db *memDBSchema) ValidateTableName(tableName string) error {
+func (db *MemDBSchema) ValidateTableName(tableName string) error {
 	for name := range db.Tables {
 		if name == tableName {
 			return fmt.Errorf("「%s」表名已经存在", name)

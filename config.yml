@@ -10,6 +10,9 @@ db:
   maxIdleConns: 5
   maxOpenConns: 10
 
+memDB:
+  name: one
+
 contacts:
   - name: i test
     email: test@test.com

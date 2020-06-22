@@ -7,6 +7,7 @@ import (
 	"github.com/lvxin0315/gg/etc"
 	"github.com/lvxin0315/gg/models"
 	"github.com/sirupsen/logrus"
+	"reflect"
 )
 
 func Pong(c *gin.Context) {
@@ -17,6 +18,9 @@ func Pong(c *gin.Context) {
 	//tryDBClient()
 	//试试模型操作-查询100条
 	tryDBSelect()
+	//试试memDB
+	tryGetDataMemDB()
+	tryMemDB()
 	//返回值：pong
 	c.JSON(200, gin.H{
 		"message": "pong",
@@ -62,4 +66,43 @@ func tryConfig() {
 	logrus.Println("etc.Config.DB.Host:", etc.Config.DB.Host)
 	logrus.Println("etc.Config.DB.MaxIdleConns:", etc.Config.DB.MaxIdleConns)
 	logrus.Println("etc.Config.DB.MaxOpenConns:", etc.Config.DB.MaxOpenConns)
+}
+
+//试试memdb
+func tryMemDB() {
+	var articleModelList []*models.MallArticle
+	err := databases.NewDB().Model(&models.MallArticle{}).Limit(10000).Scan(&articleModelList).Error
+	if err != nil {
+		logrus.Error(err)
+	}
+	//保存到memDB
+	memberTable, err := databases.NewMemBD().CreateTableSchema("MallArticle", reflect.TypeOf(&models.MallArticle{}))
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	for _, articleModel := range articleModelList {
+		_, err = memberTable.Insert(articleModel)
+		if err != nil {
+			logrus.Error(err)
+			break
+		}
+	}
+}
+
+//试试在memDB 读取数据
+func tryGetDataMemDB() {
+	table, err := databases.NewMemBD().GetTableSchema("MallArticle")
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	dataList, err := table.Select(10, 10)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	for _, article := range dataList {
+		logrus.Info("article.Author", article.(*models.MallArticle).Author)
+	}
 }

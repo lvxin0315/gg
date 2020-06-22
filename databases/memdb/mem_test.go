@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var testDB *memDBSchema
+var testDB *MemDBSchema
 
 type testData struct {
 	Name string
@@ -180,4 +180,10 @@ func TestMemTableSchema_Index(t *testing.T) {
 			fmt.Println(fmt.Sprintf("dataList[%d]: %s, %d", i, v.(*testData).Name, v.(*testData).Age))
 		}
 	})
+}
+
+//删除db
+func DropMemDB(dbName string) error {
+	testDB = nil
+	return nil
 }
