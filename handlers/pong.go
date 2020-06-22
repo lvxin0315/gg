@@ -10,7 +10,12 @@ import (
 	"reflect"
 )
 
+//记录访问次数
+var PongTime = 0
+
 func Pong(c *gin.Context) {
+	PongTime++
+	logrus.SetLevel(logrus.DebugLevel)
 	logrus.Println("我是test4的：", c.Query("a"))
 	//试试配置文件
 	//tryConfig()
@@ -19,8 +24,11 @@ func Pong(c *gin.Context) {
 	//试试模型操作-查询100条
 	tryDBSelect()
 	//试试memDB
-	tryGetDataMemDB()
-	tryMemDB()
+	if PongTime > 1 {
+		tryGetDataMemDB()
+	} else {
+		tryMemDB()
+	}
 	//返回值：pong
 	c.JSON(200, gin.H{
 		"message": "pong",
@@ -29,6 +37,7 @@ func Pong(c *gin.Context) {
 
 //试试连接池
 func tryDBClient() {
+	logrus.Debug("tryDBClient:")
 	t := 20
 	for {
 		databases.NewDB().Exec("SELECT * FROM mall_article")
@@ -51,6 +60,7 @@ func tryDBClient() {
 
 //试试查询
 func tryDBSelect() {
+	logrus.Debug("tryDBSelect:")
 	var articleModelList []*models.MallArticle
 	err := databases.NewDB().Model(&models.MallArticle{}).Where("id > ?", 10).Limit(100).Scan(&articleModelList).Error
 	if err != nil {
@@ -61,6 +71,7 @@ func tryDBSelect() {
 
 //试试配置文件
 func tryConfig() {
+	logrus.Debug("tryConfig:")
 	logrus.Println("etc.Config.APPName:", etc.Config.APPName)
 	logrus.Println("etc.Config.Contacts[0].Name:", etc.Config.Contacts[0].Name)
 	logrus.Println("etc.Config.DB.Host:", etc.Config.DB.Host)
@@ -70,6 +81,7 @@ func tryConfig() {
 
 //试试memdb
 func tryMemDB() {
+	logrus.Debug("tryMemDB:")
 	var articleModelList []*models.MallArticle
 	err := databases.NewDB().Model(&models.MallArticle{}).Limit(10000).Scan(&articleModelList).Error
 	if err != nil {
@@ -92,6 +104,7 @@ func tryMemDB() {
 
 //试试在memDB 读取数据
 func tryGetDataMemDB() {
+	logrus.Debug("tryGetDataMemDB:")
 	table, err := databases.NewMemBD().GetTableSchema("MallArticle")
 	if err != nil {
 		logrus.Error(err)
@@ -103,6 +116,6 @@ func tryGetDataMemDB() {
 		return
 	}
 	for _, article := range dataList {
-		logrus.Info("article.Author", article.(*models.MallArticle).Author)
+		logrus.Debug("article.Author", article.(*models.MallArticle).Author)
 	}
 }
