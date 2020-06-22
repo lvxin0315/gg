@@ -13,6 +13,9 @@ type memDBSchema struct {
 
 /*
 创建表，表名唯一
+@param string tableName 表名
+@param reflect.Type dataType 保存数据类型
+@return *memTableSchema
 */
 func (db *memDBSchema) CreateTableSchema(tableName string, dataType reflect.Type) (*memTableSchema, error) {
 	err := db.ValidateTableName(tableName)
@@ -26,6 +29,18 @@ func (db *memDBSchema) CreateTableSchema(tableName string, dataType reflect.Type
 	newTableSchema.initIndex()
 	db.Tables[tableName] = newTableSchema
 	return newTableSchema, nil
+}
+
+/*
+删除表
+@param string tableName 表名
+*/
+func (db *memDBSchema) DropTableSchema(tableName string) error {
+	if db.Tables[tableName] == nil {
+		return fmt.Errorf("表「%s」不存在", tableName)
+	}
+	db.Tables[tableName] = nil
+	return nil
 }
 
 /*
@@ -135,6 +150,13 @@ func (table *memTableSchema) initIndexTable(tableName, index string, dataType re
 */
 func (table *memTableSchema) Index(index string, value string) *memTableSchema {
 	return table.Indexes[index][value]
+}
+
+/*
+清空 table data
+*/
+func (table *memTableSchema) Empty() {
+	table.Data = nil
 }
 
 /*
