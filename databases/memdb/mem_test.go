@@ -140,7 +140,44 @@ func selectFunc(t *testing.T, offset, limit uint, dataLength int) {
 		fmt.Println("data1长度是：", len(data1))
 		if dataLength > 0 {
 			fmt.Println(fmt.Sprintf("查询用例: %d, %d 的最后一条数据是: %v", offset, limit, data1[len(data1)-1]))
+			fmt.Println("Name:", data1[len(data1)-1].(*testData).Name)
+			fmt.Println("Age:", data1[len(data1)-1].(*testData).Age)
 		}
 		So(len(data1), ShouldEqual, dataLength)
+	})
+}
+
+//设置索引
+func TestMemTableSchema_BaseIndex(t *testing.T) {
+	//先插入10000
+	TestMemTableSchema_Insert2(t)
+	//长度
+	fmt.Println("table1.Length():", table1.Length())
+	Convey("简单的建立索引", t, func() {
+		//定制callback
+		callback := func(data interface{}) string {
+			//年龄区分奇数偶数，被建立索引
+			if data.(*testData).Age%2 == 0 {
+				return "evenNumber"
+			} else {
+				return "oddNumber"
+			}
+		}
+		length, err := table1.BaseIndex("number", callback)
+		So(err, ShouldBeNil)
+		fmt.Println("table1.BaseIndex number:", length)
+		So(length, ShouldEqual, 2)
+	})
+}
+
+//索引查询
+func TestMemTableSchema_Index(t *testing.T) {
+	TestMemTableSchema_BaseIndex(t)
+	Convey("通过索引查询", t, func() {
+		dataList, err := table1.Index("number", "evenNumber").Select(0, 100)
+		So(err, ShouldBeNil)
+		for i, v := range dataList {
+			fmt.Println(fmt.Sprintf("dataList[%d]: %s, %d", i, v.(*testData).Name, v.(*testData).Age))
+		}
 	})
 }

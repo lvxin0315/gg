@@ -23,7 +23,7 @@ func (db *memDBSchema) CreateTableSchema(tableName string, dataType reflect.Type
 	newTableSchema := new(memTableSchema)
 	newTableSchema.Name = tableName
 	newTableSchema.dataType = dataType
-	newTableSchema.Indexes = make(map[string]*memIndexSchema)
+	newTableSchema.initIndex()
 	db.Tables[tableName] = newTableSchema
 	return newTableSchema, nil
 }
@@ -46,10 +46,13 @@ func (db *memDBSchema) ValidateTableName(tableName string) error {
 type memTableSchema struct {
 	Name string
 	//索引
-	Indexes  map[string]*memIndexSchema
+	Indexes  map[string]memIndexSchema
 	Data     []interface{}
 	dataType reflect.Type
 }
+
+//索引
+type memIndexSchema map[string]*memTableSchema
 
 /*
 添加数据到table
@@ -99,12 +102,66 @@ func (table *memTableSchema) Length() int {
 	return len(table.Data)
 }
 
-//获取长度
+//判断是空的
 func (table *memTableSchema) IsEmpty() bool {
 	if len(table.Data) == 0 || table.Data == nil {
 		return true
 	}
 	return false
+}
+
+//初始化索引
+func (table *memTableSchema) initIndex() {
+	if table.Indexes == nil {
+		table.Indexes = make(map[string]memIndexSchema)
+	}
+}
+
+//初始化索引table的基础信息
+func (table *memTableSchema) initIndexTable(tableName, index string, dataType reflect.Type) *memTableSchema {
+	if table.Name == "" {
+		table.Name = fmt.Sprintf("index_%s_%s", tableName, index)
+	}
+	if table.dataType == nil {
+		table.dataType = dataType
+	}
+	return table
+}
+
+/*
+使用索引获取结果，配合Select
+@param string index 索引名称
+@return this
+*/
+func (table *memTableSchema) Index(index string, value string) *memTableSchema {
+	return table.Indexes[index][value]
+}
+
+/*
+简版索引
+通过callback遍历data，建立
+@param string index 索引名称
+@param func(interface{}) string callback 回调方法
+@return int 索引内容长度
+*/
+func (table *memTableSchema) BaseIndex(index string, callback func(interface{}) string) (length int, err error) {
+	table.initIndex()
+	mis := memIndexSchema{}
+	//遍历data
+	for _, item := range table.Data {
+		if mis[callback(item)] == nil {
+			mis[callback(item)] = new(memTableSchema)
+			mis[callback(item)].initIndexTable(table.Name, index, table.dataType)
+		}
+		_, err = mis[callback(item)].Insert(item)
+		if err != nil {
+			break
+		}
+	}
+	//刷新
+	table.Indexes[index] = mis
+	length = len(mis)
+	return
 }
 
 /*
@@ -115,10 +172,4 @@ func (table *memTableSchema) ValidateDataType(data interface{}) error {
 		return fmt.Errorf("table的数据类型是「%v」,参数的类型是「%v」", table.dataType, reflect.TypeOf(data))
 	}
 	return nil
-}
-
-//索引
-type memIndexSchema struct {
-	Value interface{}
-	Data  interface{}
 }
