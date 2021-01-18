@@ -1,0 +1,18 @@
+# MySQL user
+user: root
+# MySQL password
+password: root
+# MySQL port
+port: 3306
+# MySQL host
+host: 127.0.0.1
+# Flavor: mysql or mariadb
+flavor: mysql
+# Use raw mode
+raw: false
+# Schema.table_name 使用逗号分隔 监听的表
+tables:
+  - demo
+  - demo5
+# Slave serverID
+serverID: 111
