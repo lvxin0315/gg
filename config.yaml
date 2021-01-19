@@ -1,3 +1,4 @@
+app_debug: true
 # MySQL user
 user: root
 # MySQL password
@@ -12,7 +13,7 @@ flavor: mysql
 raw: false
 # Schema.table_name 使用逗号分隔 监听的表
 tables:
-  - demo
-  - demo5
+  - demo9.t_product
+  - demo9.goods
 # Slave serverID
 serverID: 111

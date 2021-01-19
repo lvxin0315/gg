@@ -6,8 +6,6 @@ type mysqlConfig struct {
 	Password string
 	Port     int
 	Flavor   string
-	Raw      bool
-	ServerID int
 }
 
 var MysqlConfig mysqlConfig

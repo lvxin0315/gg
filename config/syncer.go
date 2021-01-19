@@ -6,7 +6,9 @@ import (
 )
 
 type syncerConfig struct {
-	Tables []string
+	Tables   []string
+	Raw      bool
+	ServerID int
 }
 
 var SyncerConfig syncerConfig
