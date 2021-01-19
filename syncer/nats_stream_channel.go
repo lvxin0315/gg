@@ -26,7 +26,7 @@ func (channel *natsStreamChannel) init(config config.ChannelConfig) error {
 		logrus.Error("natsChannel.init: ", err)
 		return err
 	}
-	sc, err := stan.Connect("test-cluster", "gg", stan.NatsConn(nc))
+	sc, err := stan.Connect("test-cluster", config.User, stan.NatsConn(nc))
 	if err != nil {
 		logrus.Error("natsStreamChannel.init: ", err)
 		return err

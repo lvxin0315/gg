@@ -29,6 +29,7 @@ port = 4222
 type = "nats_stream"
 host = "127.0.0.1"
 port = 4222
+user = "gg"
 
 # Schema.table_name 使用逗号分隔 监听的表
 [tables]
