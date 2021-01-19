@@ -37,8 +37,8 @@ func (channel *natsChannel) sendMessage(subject string, data []byte) error {
 		}
 	}
 	err := channel.connect.Publish(subject, data)
-	if config.CommonConfig.AppDebug {
-		logrus.Debug("subject: ", subject, " data: ", string(data))
+	if config.CommonConfig.Debug {
+		logrus.Debug("natsChannel - subject: ", subject, " data: ", string(data))
 	}
 	return err
 }
@@ -50,5 +50,5 @@ func (channel *natsChannel) healthy() {
 
 // 关闭
 func (channel *natsChannel) close() {
-
+	channel.connect.Close()
 }

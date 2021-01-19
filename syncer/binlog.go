@@ -1,6 +1,7 @@
 package syncer
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/lvxin0315/gg/config"
 	"github.com/siddontang/go-mysql/client"
@@ -8,6 +9,22 @@ import (
 	"github.com/siddontang/go-mysql/replication"
 	"github.com/sirupsen/logrus"
 )
+
+type WriteBinlogSyncerData struct {
+	Event    string
+	DataList map[string]interface{}
+}
+
+type UpdateBinlogSyncerData struct {
+	Event          string
+	BeforeDataList map[string]interface{}
+	AfterDataList  map[string]interface{}
+}
+
+type DeleteBinlogSyncerData struct {
+	Event    string
+	DataList map[string]interface{}
+}
 
 type BinlogSyncer struct {
 	sign chan bool
@@ -96,7 +113,7 @@ func (syncer *BinlogSyncer) error(err error) {
 	if err == nil {
 		return
 	}
-	if config.CommonConfig.AppDebug {
+	if config.CommonConfig.Debug {
 		logrus.Error(err)
 	}
 	panic(err)
@@ -135,7 +152,7 @@ func (syncer *BinlogSyncer) listenBinlog() error {
 			return nil
 		default:
 			for _, ev := range s.DumpEvents() {
-				logrus.Info("ev.Header.EventType:", ev.Header.EventType)
+				//logrus.Info("ev.Header.EventType:", ev.Header.EventType)
 				// 处理日志
 				syncer.dumpEvent(ev)
 			}
@@ -153,9 +170,7 @@ func (syncer *BinlogSyncer) listenBinlog() error {
  **/
 func (syncer *BinlogSyncer) writeEvent(ev *replication.BinlogEvent) {
 	rowsEv := ev.Event.(*replication.RowsEvent)
-	schema := rowsEv.Table.Schema
-	table := rowsEv.Table.Table
-	tableName := fmt.Sprintf("%s.%s", schema, table)
+	tableName := syncer.getEventLogTableName(rowsEv)
 	if !syncer.ts.inTableList(tableName) {
 		return
 	}
@@ -164,12 +179,19 @@ func (syncer *BinlogSyncer) writeEvent(ev *replication.BinlogEvent) {
 		logrus.Error(tableName, " - 字段长度为0")
 		return
 	}
-	for _, dataList := range rowsEv.Rows {
-		for index, data := range dataList {
-			//TODO
-			logrus.Info(fmt.Sprintf("%s : %v", columnNameList[index], data))
-		}
+	logrus.Info("writeEvent len:", len(rowsEv.Rows))
+	if len(rowsEv.Rows) != 1 {
+		// 为毛不是1
+		logrus.Error("writeEvent len:", len(rowsEv.Rows))
+		return
 	}
+	writeBinlogSyncerData := new(WriteBinlogSyncerData)
+	writeBinlogSyncerData.Event = ev.Header.EventType.String()
+	writeBinlogSyncerData.DataList = make(map[string]interface{})
+	for index, data := range rowsEv.Rows[0] {
+		writeBinlogSyncerData.DataList[columnNameList[index]] = data
+	}
+	syncer.sendWriteEventMessage(tableName, writeBinlogSyncerData)
 }
 
 /**
@@ -181,10 +203,7 @@ func (syncer *BinlogSyncer) writeEvent(ev *replication.BinlogEvent) {
  **/
 func (syncer *BinlogSyncer) updateEvent(ev *replication.BinlogEvent) {
 	rowsEv := ev.Event.(*replication.RowsEvent)
-	schema := rowsEv.Table.Schema
-	table := rowsEv.Table.Table
-	tableName := fmt.Sprintf("%s.%s", schema, table)
-
+	tableName := syncer.getEventLogTableName(rowsEv)
 	if !syncer.ts.inTableList(tableName) {
 		return
 	}
@@ -193,12 +212,24 @@ func (syncer *BinlogSyncer) updateEvent(ev *replication.BinlogEvent) {
 		logrus.Error(tableName, " - 字段长度为0")
 		return
 	}
-	for _, dataList := range rowsEv.Rows {
-		for index, data := range dataList {
-			//TODO
-			logrus.Info(fmt.Sprintf("%s : %v", columnNameList[index], data))
-		}
+
+	logrus.Info("updateEvent len:", len(rowsEv.Rows))
+	if len(rowsEv.Rows) != 2 {
+		// 为毛不是2
+		logrus.Error("updateEvent len:", len(rowsEv.Rows))
+		return
 	}
+	updateBinlogSyncerData := new(UpdateBinlogSyncerData)
+	updateBinlogSyncerData.Event = ev.Header.EventType.String()
+	updateBinlogSyncerData.BeforeDataList = make(map[string]interface{})
+	updateBinlogSyncerData.AfterDataList = make(map[string]interface{})
+	for index, data := range rowsEv.Rows[0] {
+		updateBinlogSyncerData.BeforeDataList[columnNameList[index]] = data
+	}
+	for index, data := range rowsEv.Rows[1] {
+		updateBinlogSyncerData.AfterDataList[columnNameList[index]] = data
+	}
+	syncer.sendUpdateEventMessage(tableName, updateBinlogSyncerData)
 }
 
 /**
@@ -210,10 +241,7 @@ func (syncer *BinlogSyncer) updateEvent(ev *replication.BinlogEvent) {
  **/
 func (syncer *BinlogSyncer) deleteEvent(ev *replication.BinlogEvent) {
 	rowsEv := ev.Event.(*replication.RowsEvent)
-	schema := rowsEv.Table.Schema
-	table := rowsEv.Table.Table
-	tableName := fmt.Sprintf("%s.%s", schema, table)
-
+	tableName := syncer.getEventLogTableName(rowsEv)
 	if !syncer.ts.inTableList(tableName) {
 		return
 	}
@@ -222,12 +250,19 @@ func (syncer *BinlogSyncer) deleteEvent(ev *replication.BinlogEvent) {
 		logrus.Error(tableName, " - 字段长度为0")
 		return
 	}
-	for _, dataList := range rowsEv.Rows {
-		for index, data := range dataList {
-			//TODO
-			logrus.Info(fmt.Sprintf("%s : %v", columnNameList[index], data))
-		}
+	logrus.Info("deleteEvent len:", len(rowsEv.Rows))
+	if len(rowsEv.Rows) != 1 {
+		// 为毛不是1
+		logrus.Error("deleteEvent len:", len(rowsEv.Rows))
+		return
 	}
+	deleteBinlogSyncerData := new(DeleteBinlogSyncerData)
+	deleteBinlogSyncerData.Event = ev.Header.EventType.String()
+	deleteBinlogSyncerData.DataList = make(map[string]interface{})
+	for index, data := range rowsEv.Rows[0] {
+		deleteBinlogSyncerData.DataList[columnNameList[index]] = data
+	}
+	syncer.sendDeleteEventMessage(tableName, deleteBinlogSyncerData)
 }
 
 /**
@@ -274,4 +309,65 @@ func (syncer *BinlogSyncer) dumpEvent(ev *replication.BinlogEvent) {
 	default:
 		logrus.Info(ev.Header.EventType)
 	}
+}
+
+/**
+ * @Author lvxin0315@163.com
+ * @Description 发写操作的消息
+ * @Date 8:03 下午 2021/1/19
+ * @Param
+ * @return
+ **/
+func (syncer *BinlogSyncer) sendWriteEventMessage(tableName string, data *WriteBinlogSyncerData) {
+	dataJson, err := json.Marshal(data)
+	if err != nil {
+		logrus.Error("sendWriteEventMessage.json.Marshal error: ", err)
+		return
+	}
+	syncer.cs.sendMessage(tableName, dataJson)
+}
+
+/**
+ * @Author lvxin0315@163.com
+ * @Description 发更新操作的消息
+ * @Date 8:03 下午 2021/1/19
+ * @Param
+ * @return
+ **/
+func (syncer *BinlogSyncer) sendUpdateEventMessage(tableName string, data *UpdateBinlogSyncerData) {
+	dataJson, err := json.Marshal(data)
+	if err != nil {
+		logrus.Error("sendUpdateEventMessage.json.Marshal error: ", err)
+		return
+	}
+	syncer.cs.sendMessage(tableName, dataJson)
+}
+
+/**
+ * @Author lvxin0315@163.com
+ * @Description 发删除操作的消息
+ * @Date 8:03 下午 2021/1/19
+ * @Param
+ * @return
+ **/
+func (syncer *BinlogSyncer) sendDeleteEventMessage(tableName string, data *DeleteBinlogSyncerData) {
+	dataJson, err := json.Marshal(data)
+	if err != nil {
+		logrus.Error("sendDeleteEventMessage.json.Marshal error: ", err)
+		return
+	}
+	syncer.cs.sendMessage(tableName, dataJson)
+}
+
+/**
+ * @Author lvxin0315@163.com
+ * @Description 通过event 获取table name
+ * @Date 8:27 下午 2021/1/19
+ * @Param
+ * @return
+ **/
+func (syncer *BinlogSyncer) getEventLogTableName(rowsEv *replication.RowsEvent) string {
+	schema := rowsEv.Table.Schema
+	table := rowsEv.Table.Table
+	return fmt.Sprintf("%s.%s", schema, table)
 }

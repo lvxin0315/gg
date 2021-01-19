@@ -17,6 +17,12 @@ type channel interface {
 	close()
 }
 
+// 消息处理
+type channelSyncer struct {
+	// 总的通讯集合
+	channelList sync.Map
+}
+
 // 初始化消息channel
 func (syncer *channelSyncer) initChannels() {
 	for key, channelConfig := range config.ChannelsConfig.Channels {
@@ -24,6 +30,8 @@ func (syncer *channelSyncer) initChannels() {
 		switch channelConfig.Type {
 		case config.NatsChannel:
 			c = new(natsChannel)
+		case config.NatsStreamChannel:
+			c = new(natsStreamChannel)
 		case config.RabbitMQChannel:
 			// TODO
 			continue
@@ -53,8 +61,26 @@ func (syncer *channelSyncer) closeChannels() {
 	})
 }
 
-// 消息处理
-type channelSyncer struct {
-	// 总的通讯集合
-	channelList sync.Map
+// 发送消息
+func (syncer *channelSyncer) sendMessage(tableName string, data []byte) {
+	for _, syncerConfig := range config.SyncerConfig.Tables {
+		if syncerConfig.Name == tableName {
+			go func(channelKey, tableName string, data []byte) {
+				syncer.sendChannelMessage(channelKey, tableName, data)
+			}(syncerConfig.Channel, tableName, data)
+		}
+	}
+}
+
+// 通道发送消息
+func (syncer *channelSyncer) sendChannelMessage(channelKey, tableName string, data []byte) {
+	c, ok := syncer.channelList.Load(channelKey)
+	if !ok {
+		logrus.Error("sendChannelMessage Load empty: ", channelKey)
+		return
+	}
+	err := c.(channel).sendMessage(config.SyncerConfig.Subject+tableName, data)
+	if err != nil {
+		logrus.Error("channelKey: ", channelKey, " tableName: ", tableName, " sendChannelMessage error")
+	}
 }

@@ -1,8 +1,9 @@
 package config
 
 const (
-	NatsChannel     = "nats"
-	RabbitMQChannel = "rabbit"
+	NatsChannel       = "nats"
+	NatsStreamChannel = "nats_stream"
+	RabbitMQChannel   = "rabbit"
 )
 
 var ChannelsConfig channelsConfig

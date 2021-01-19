@@ -1,7 +1,7 @@
 package config
 
 type commonConfig struct {
-	AppDebug bool
+	Debug bool
 }
 
 var CommonConfig commonConfig

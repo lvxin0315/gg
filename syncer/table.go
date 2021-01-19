@@ -142,7 +142,7 @@ func (syncer *tableSyncer) updateTableColumn() {
 			return
 		default:
 			logrus.Info("updateTableColumn ...")
-			time.Sleep(2 * time.Second)
+			time.Sleep(time.Duration(config.SyncerConfig.UpdateTableColumnTime) * time.Second)
 			err := syncer.initTableColumn()
 			if err != nil {
 				logrus.Error("updateTableColumn error: ", err)

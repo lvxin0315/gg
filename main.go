@@ -4,22 +4,26 @@ import (
 	"github.com/lvxin0315/gg/config"
 	"github.com/lvxin0315/gg/syncer"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 func main() {
 	// 加载配置
 	config.InitConfig()
-
-	logrus.Info(config.SyncerConfig)
+	// 日志配置
+	if config.CommonConfig.Debug {
+		logrus.SetLevel(logrus.DebugLevel)
+	} else {
+		logrus.SetLevel(logrus.WarnLevel)
+	}
 
 	// 启动binlog
 	binlogSyncer := new(syncer.BinlogSyncer)
 	binlogSyncer.Start()
-	go func() {
-		time.Sleep(10 * time.Second)
-		logrus.Info("sleep")
-		binlogSyncer.Close()
-	}()
+	defer binlogSyncer.Close()
+	//go func() {
+	//	time.Sleep(10 * time.Second)
+	//	logrus.Info("sleep")
+	//	binlogSyncer.Close()
+	//}()
 	select {}
 }

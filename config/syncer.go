@@ -11,9 +11,11 @@ type SyncerTableConfig struct {
 }
 
 type syncerConfig struct {
-	Tables   map[string]SyncerTableConfig
-	Raw      bool
-	ServerID int
+	Tables                map[string]SyncerTableConfig
+	Raw                   bool
+	ServerID              int
+	UpdateTableColumnTime int
+	Subject               string
 }
 
 var SyncerConfig syncerConfig
