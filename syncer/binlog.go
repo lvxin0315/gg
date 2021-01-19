@@ -10,19 +10,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type BinlogSyncerData struct {
+	Event string //事件名称
+}
+
 type WriteBinlogSyncerData struct {
-	Event    string
+	BinlogSyncerData
 	DataList map[string]interface{}
 }
 
 type UpdateBinlogSyncerData struct {
-	Event          string
+	BinlogSyncerData
 	BeforeDataList map[string]interface{}
 	AfterDataList  map[string]interface{}
 }
 
 type DeleteBinlogSyncerData struct {
-	Event    string
+	BinlogSyncerData
 	DataList map[string]interface{}
 }
 
