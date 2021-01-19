@@ -11,6 +11,8 @@ func main() {
 	// 加载配置
 	config.InitConfig()
 
+	logrus.Info(config.SyncerConfig)
+
 	// 启动binlog
 	binlogSyncer := new(syncer.BinlogSyncer)
 	binlogSyncer.Start()

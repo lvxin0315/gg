@@ -16,7 +16,7 @@ var ggViper *viper.Viper
  **/
 func InitConfig() {
 	ggViper = viper.New()
-	ggViper.SetConfigType("yaml")
+	ggViper.SetConfigType("toml")
 	ggViper.AddConfigPath("./")
 	err := ggViper.ReadInConfig()
 	if err != nil {
@@ -32,6 +32,10 @@ func InitConfig() {
 		panic(err)
 	}
 	err = ggViper.Unmarshal(&SyncerConfig)
+	if err != nil {
+		panic(err)
+	}
+	err = ggViper.Unmarshal(&ChannelsConfig)
 	if err != nil {
 		panic(err)
 	}

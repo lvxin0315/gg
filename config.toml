@@ -1,0 +1,37 @@
+app_debug = true
+# MySQL user
+user = "root"
+# MySQL password
+password = "root"
+# MySQL port
+port = 3306
+# MySQL host
+host = "127.0.0.1"
+# Flavor = mysql or mariadb
+flavor = "mysql"
+# Use raw mode
+raw = false
+# Slave serverID
+serverID = 111
+
+# 基础的主题
+subject = "gg"
+
+# 消息通道
+[channels]
+[channels.nats1]
+type = "nats"
+
+
+# Schema.table_name 使用逗号分隔 监听的表
+[tables]
+[tables.a]
+name = "demo9.t_product"
+channel = "nats1"
+
+
+[tables.b]
+name = "demo9.goods"
+channel = "nats1"
+
+

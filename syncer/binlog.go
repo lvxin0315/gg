@@ -7,16 +7,16 @@ import (
 	"github.com/siddontang/go-mysql/mysql"
 	"github.com/siddontang/go-mysql/replication"
 	"github.com/sirupsen/logrus"
-	"sync"
-	"time"
 )
 
 type BinlogSyncer struct {
 	sign chan bool
-	// 字段集合
-	tableColumnMap sync.Map
 	// Position
 	position mysql.Position
+	// 消息通道
+	cs channelSyncer
+	// 表结构
+	ts tableSyncer
 }
 
 /**
@@ -27,14 +27,19 @@ type BinlogSyncer struct {
  * @return
  **/
 func (syncer *BinlogSyncer) Start() {
-	// 1. 表字段
-	err := syncer.initTableColumn()
+	// 1. 初始化通讯通道
+	syncer.cs = channelSyncer{}
+	syncer.cs.initChannels()
+
+	// 2. 表字段
+	syncer.ts = tableSyncer{}
+	err := syncer.ts.init()
 	syncer.error(err)
-	// 2. 起始pos
+
+	// 3. 起始pos
 	err = syncer.getMasterPos()
 	syncer.error(err)
-	go syncer.updateTableColumn()
-	// 3. 启动监听
+	// 4. 启动监听
 	syncer.sign = make(chan bool)
 	go func() {
 		err = syncer.listenBinlog()
@@ -53,64 +58,8 @@ func (syncer *BinlogSyncer) Start() {
 func (syncer *BinlogSyncer) Close() {
 	syncer.sign <- false
 	syncer.sign = nil
-}
-
-/**
- * @Author lvxin0315@163.com
- * @Description 初始化表的字段信息
- * @Date 9:45 上午 2021/1/18
- * @Param
- * @return
- **/
-func (syncer *BinlogSyncer) initTableColumn() error {
-	for _, schemaTableName := range config.SyncerConfig.Tables {
-		err := syncer.getTableFields(schemaTableName)
-		if err != nil {
-			logrus.Error("initTableColumn error: ", err)
-			syncer.Close()
-			return err
-		}
-	}
-	return nil
-}
-
-/**
- * @Author lvxin0315@163.com
- * @Description 获取表字段名称
- * @Date 3:22 下午 2021/1/15
- * @Param
- * @return
- **/
-func (syncer *BinlogSyncer) getTableFields(schemaTableName string) error {
-	query := fmt.Sprintf("SHOW COLUMNS FROM %s", schemaTableName)
-	c, err := client.Connect(fmt.Sprintf("%s:%d",
-		config.MysqlConfig.Host,
-		config.MysqlConfig.Port),
-		config.MysqlConfig.User,
-		config.MysqlConfig.Password,
-		"")
-	if err != nil {
-		logrus.Error("getTableFields client.Connect error: ", err)
-		return err
-	}
-	defer c.Close()
-	rr, err := c.Execute(query)
-	if err != nil {
-		logrus.Error("getTableFields Execute error: ", err)
-		return err
-	}
-	var fieldList []string
-
-	for i := 0; i < rr.RowNumber(); i++ {
-		colName, err := rr.GetString(i, 0)
-		if err != nil {
-			logrus.Error("getTableFields GetString error: ", err)
-			return err
-		}
-		fieldList = append(fieldList, colName)
-	}
-	syncer.tableColumnMap.Store(fmt.Sprintf("%s", schemaTableName), fieldList)
-	return nil
+	syncer.cs.closeChannels()
+	syncer.ts.close()
 }
 
 /**
@@ -197,42 +146,6 @@ func (syncer *BinlogSyncer) listenBinlog() error {
 
 /**
  * @Author lvxin0315@163.com
- * @Description 获取table的字段列表
- * @Date 6:53 下午 2021/1/15
- * @Param
- * @return
- **/
-func (syncer *BinlogSyncer) getTableColumnList(name string) []string {
-	columnNameList, ok := syncer.tableColumnMap.Load(name)
-	if !ok {
-		// TODO 为毛会没有
-		fmt.Println("getTableColumnList: 为毛没有")
-		err := syncer.getTableFields(name)
-		if err != nil {
-			panic(err)
-		}
-		return syncer.getTableColumnList(name)
-	}
-	return columnNameList.([]string)
-}
-
-/**
- * @Author lvxin0315@163.com
- * @Description 刷新并获取table的字段列表
- * @Date 7:00 下午 2021/1/15
- * @Param
- * @return
- **/
-func (syncer *BinlogSyncer) refreshAndGetTableColumnList(name string) []string {
-	err := syncer.getTableFields(name)
-	if err != nil {
-		panic(err)
-	}
-	return syncer.getTableColumnList(name)
-}
-
-/**
- * @Author lvxin0315@163.com
  * @Description 写event
  * @Date 11:43 上午 2021/1/18
  * @Param
@@ -243,11 +156,10 @@ func (syncer *BinlogSyncer) writeEvent(ev *replication.BinlogEvent) {
 	schema := rowsEv.Table.Schema
 	table := rowsEv.Table.Table
 	tableName := fmt.Sprintf("%s.%s", schema, table)
-
-	if !syncer.inTableList(tableName) {
+	if !syncer.ts.inTableList(tableName) {
 		return
 	}
-	columnNameList := syncer.checkColumnNumAndGetTableColumnList(tableName, int(rowsEv.ColumnCount))
+	columnNameList := syncer.ts.checkColumnNumAndGetTableColumnList(tableName, int(rowsEv.ColumnCount))
 	if len(columnNameList) == 0 {
 		logrus.Error(tableName, " - 字段长度为0")
 		return
@@ -257,38 +169,6 @@ func (syncer *BinlogSyncer) writeEvent(ev *replication.BinlogEvent) {
 			//TODO
 			logrus.Info(fmt.Sprintf("%s : %v", columnNameList[index], data))
 		}
-	}
-}
-
-/**
- * @Author lvxin0315@163.com
- * @Description 判断是否被监控
- * @Date 6:03 下午 2021/1/15
- * @Param
- * @return
- **/
-func (syncer *BinlogSyncer) inTableList(name string) bool {
-	for _, t := range config.SyncerConfig.Tables {
-		if t == name {
-			return true
-		}
-	}
-	return false
-}
-
-/**
- * @Author lvxin0315@163.com
- * @Description 更新table的字段
- * @Date 3:38 下午 2021/1/18
- * @Param
- * @return
- **/
-func (syncer *BinlogSyncer) updateTableColumn() {
-	for {
-		time.Sleep(60 * time.Second)
-		logrus.Info("updateTableColumn ...")
-		err := syncer.initTableColumn()
-		syncer.error(err)
 	}
 }
 
@@ -305,10 +185,10 @@ func (syncer *BinlogSyncer) updateEvent(ev *replication.BinlogEvent) {
 	table := rowsEv.Table.Table
 	tableName := fmt.Sprintf("%s.%s", schema, table)
 
-	if !syncer.inTableList(tableName) {
+	if !syncer.ts.inTableList(tableName) {
 		return
 	}
-	columnNameList := syncer.checkColumnNumAndGetTableColumnList(tableName, int(rowsEv.ColumnCount))
+	columnNameList := syncer.ts.checkColumnNumAndGetTableColumnList(tableName, int(rowsEv.ColumnCount))
 	if len(columnNameList) == 0 {
 		logrus.Error(tableName, " - 字段长度为0")
 		return
@@ -334,10 +214,10 @@ func (syncer *BinlogSyncer) deleteEvent(ev *replication.BinlogEvent) {
 	table := rowsEv.Table.Table
 	tableName := fmt.Sprintf("%s.%s", schema, table)
 
-	if !syncer.inTableList(tableName) {
+	if !syncer.ts.inTableList(tableName) {
 		return
 	}
-	columnNameList := syncer.checkColumnNumAndGetTableColumnList(tableName, int(rowsEv.ColumnCount))
+	columnNameList := syncer.ts.checkColumnNumAndGetTableColumnList(tableName, int(rowsEv.ColumnCount))
 	if len(columnNameList) == 0 {
 		logrus.Error(tableName, " - 字段长度为0")
 		return
@@ -352,23 +232,6 @@ func (syncer *BinlogSyncer) deleteEvent(ev *replication.BinlogEvent) {
 
 /**
  * @Author lvxin0315@163.com
- * @Description 校验字段数与内存中的值，并返回
- * @Date 5:37 下午 2021/1/18
- * @Param
- * @return
- **/
-func (syncer *BinlogSyncer) checkColumnNumAndGetTableColumnList(tableName string, columnNum int) []string {
-	columnNameList := syncer.getTableColumnList(tableName)
-	//字段数量变化
-	if len(columnNameList) != columnNum {
-		logrus.Info("refreshAndGetTableColumnList")
-		columnNameList = syncer.refreshAndGetTableColumnList(tableName)
-	}
-	return columnNameList
-}
-
-/**
- * @Author lvxin0315@163.com
  * @Description QUERY_EVENT
  * @Date 5:51 下午 2021/1/18
  * @Param
@@ -378,7 +241,7 @@ func (syncer *BinlogSyncer) queryEvent(ev *replication.BinlogEvent) {
 	queryEv := ev.Event.(*replication.QueryEvent)
 	logrus.Info("QueryEvent Query:", string(queryEv.Query))
 	// TODO 目前全字段更新
-	syncer.initTableColumn()
+	_ = syncer.ts.initTableColumn()
 }
 
 /**

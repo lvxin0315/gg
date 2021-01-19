@@ -5,8 +5,13 @@ import (
 	"time"
 )
 
+type SyncerTableConfig struct {
+	Name    string
+	Channel string
+}
+
 type syncerConfig struct {
-	Tables   []string
+	Tables   map[string]SyncerTableConfig
 	Raw      bool
 	ServerID int
 }
@@ -21,7 +26,6 @@ func updateSyncerConfig() {
 			logrus.Error("updateSyncerConfig:", err)
 			return
 		}
-		SyncerConfig.Tables = []string{}
 		err = ggViper.Unmarshal(&SyncerConfig)
 		if err != nil {
 			panic(err)
