@@ -57,7 +57,7 @@ func (channel *rabbitMQChannel) sendMessage(subject string, data []byte) error {
 		return err
 	}
 	if config.CommonConfig.Debug {
-		logrus.Debug("natsChannel - subject: ", subject, " data: ", string(data))
+		logrus.Debug("rabbitMQChannel - subject: ", subject, " data: ", string(data))
 	}
 	return nil
 }
