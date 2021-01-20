@@ -8,6 +8,7 @@ import (
 	"github.com/siddontang/go-mysql/mysql"
 	"github.com/siddontang/go-mysql/replication"
 	"github.com/sirupsen/logrus"
+	"time"
 )
 
 type BinlogSyncerData struct {
@@ -160,8 +161,9 @@ func (syncer *BinlogSyncer) listenBinlog() error {
 				// 处理日志
 				syncer.dumpEvent(ev)
 			}
+			// TODO 加个延迟，暂时不知道怎么解决CPU100%问题
+			time.Sleep(10 * time.Millisecond)
 		}
-
 	}
 }
 

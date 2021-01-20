@@ -32,7 +32,6 @@ func updateSyncerConfig() {
 		if err != nil {
 			panic(err)
 		}
-		logrus.Info("tables", SyncerConfig.Tables)
 	}
 
 }
