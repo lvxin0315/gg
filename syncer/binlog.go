@@ -277,8 +277,8 @@ func (syncer *BinlogSyncer) deleteEvent(ev *replication.BinlogEvent) {
  * @return
  **/
 func (syncer *BinlogSyncer) queryEvent(ev *replication.BinlogEvent) {
-	queryEv := ev.Event.(*replication.QueryEvent)
-	logrus.Info("QueryEvent Query:", string(queryEv.Query))
+	//queryEv := ev.Event.(*replication.QueryEvent)
+	//logrus.Info("QueryEvent Query:", string(queryEv.Query))
 	// TODO 目前全字段更新
 	_ = syncer.ts.initTableColumn()
 }
@@ -292,26 +292,20 @@ func (syncer *BinlogSyncer) queryEvent(ev *replication.BinlogEvent) {
  **/
 func (syncer *BinlogSyncer) dumpEvent(ev *replication.BinlogEvent) {
 	switch ev.Header.EventType {
-	case replication.WRITE_ROWS_EVENTv0:
-	case replication.WRITE_ROWS_EVENTv1:
-	case replication.WRITE_ROWS_EVENTv2:
+	case replication.WRITE_ROWS_EVENTv0, replication.WRITE_ROWS_EVENTv1, replication.WRITE_ROWS_EVENTv2:
 		syncer.writeEvent(ev)
 
-	case replication.UPDATE_ROWS_EVENTv0:
-	case replication.UPDATE_ROWS_EVENTv1:
-	case replication.UPDATE_ROWS_EVENTv2:
+	case replication.UPDATE_ROWS_EVENTv0, replication.UPDATE_ROWS_EVENTv1, replication.UPDATE_ROWS_EVENTv2:
 		syncer.updateEvent(ev)
 
-	case replication.DELETE_ROWS_EVENTv0:
-	case replication.DELETE_ROWS_EVENTv1:
-	case replication.DELETE_ROWS_EVENTv2:
+	case replication.DELETE_ROWS_EVENTv0, replication.DELETE_ROWS_EVENTv1, replication.DELETE_ROWS_EVENTv2:
 		syncer.deleteEvent(ev)
 
 	case replication.QUERY_EVENT: //包含表结构变化
 		syncer.queryEvent(ev)
 
 	default:
-		logrus.Info(ev.Header.EventType)
+		//logrus.Info(ev.Header.EventType)
 	}
 }
 
