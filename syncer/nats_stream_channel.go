@@ -26,7 +26,7 @@ func (channel *natsStreamChannel) init(config config.ChannelConfig) error {
 		logrus.Error("natsChannel.init: ", err)
 		return err
 	}
-	sc, err := stan.Connect("test-cluster", config.User, stan.NatsConn(nc))
+	sc, err := stan.Connect("test-cluster", config.ClientID, stan.NatsConn(nc))
 	if err != nil {
 		logrus.Error("natsStreamChannel.init: ", err)
 		return err
@@ -58,6 +58,7 @@ func (channel *natsStreamChannel) healthy() {
 
 // 关闭
 func (channel *natsStreamChannel) close() {
-	channel.connect.Close()
 	_ = channel.streamConnect.Close()
+	channel.connect.Close()
+
 }

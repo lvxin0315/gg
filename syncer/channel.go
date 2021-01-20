@@ -33,9 +33,7 @@ func (syncer *channelSyncer) initChannels() {
 		case config.NatsStreamChannel:
 			c = new(natsStreamChannel)
 		case config.RabbitMQChannel:
-			// TODO
-			continue
-			//c = new(natsChannel)
+			c = new(rabbitMQChannel)
 		default:
 			logrus.Warn("暂时不支持的通讯方式：", channelConfig.Type)
 			continue

@@ -29,14 +29,21 @@ port = 4222
 type = "nats_stream"
 host = "127.0.0.1"
 port = 4222
-user = "gg"
+clientID = "gg"
+
+[channels.rabbitmq1]
+type = "rabbitmq"
+host = "127.0.0.1"
+port = 5672
+user = "guest"
+password = "guest"
+exchange = "gg_exchange"
 
 # Schema.table_name 使用逗号分隔 监听的表
 [tables]
 [tables.a]
 name = "demo9.t_product"
 channel = "nats1"
-
 
 [tables.b]
 name = "demo9.goods"
@@ -45,5 +52,9 @@ channel = "nats1"
 [tables.c]
 name = "demo9.t_product"
 channel = "nats_stream1"
+
+[tables.d]
+name = "demo9.t_product"
+channel = "rabbitmq1"
 
 
