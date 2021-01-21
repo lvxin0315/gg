@@ -162,7 +162,7 @@ func (syncer *BinlogSyncer) listenBinlog() error {
 				syncer.dumpEvent(ev)
 			}
 			// TODO 加个延迟，暂时不知道怎么解决CPU100%问题
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
 		}
 	}
 }
