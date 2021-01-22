@@ -2,6 +2,8 @@
 
 ** gg **，没想好名字，随便起的，主要用途是基于 MySQL 数据库增量日志解析，提供增量数据订阅和消费
 
+[wiki](https://github.com/lvxin0315/gg/wiki/QuickStart)
+
 当前的 canal 支持源端 MySQL 版本包括： 
 - 5.6.x
 - 5.7.x
